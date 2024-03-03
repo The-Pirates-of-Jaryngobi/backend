@@ -131,3 +131,5 @@ def lambda_handler(event, context):
             """
             위와 같은 방식으로 코드 작성 예정...
             """
+    
+    conn.close()
