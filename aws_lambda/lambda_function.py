@@ -50,15 +50,23 @@ def get_ingredient_info_list(cursor, recipe_id: int) -> list:
 	"""
 	return ingredient_info_list
 
-# "product" 테이블에서 해당 재료명에 대해서 상품 정보를 반환하는 함수.
-def get_product_info(cursor, ingredient_name: str) -> tuple:
-	product_price = None
-	product_unit_price = None
-	product_url = None
-	"""
-	재료명에 대한 쿼리 -> 가격, 단위당 가격, 상품 링크 정보 추출.
-	"""
-	return (product_price, product_unit_price, product_url)
+# "product" 테이블에서 해당 재료명에 대해서 최저가 상품 정보를 반환하는 함수.
+def get_cheapest_product_info(cursor, ingredient_name: str) -> tuple:
+    product_price = None
+    product_unit_price = None
+    product_url = None
+ 
+    # 해당 재료명에 대한 쿼리
+    cursor.execute("SELECT price, unit_price, url FROM product WHERE ingredient_name = ? ORDER BY COALESCE(unit_price, price) ASC LIMIT 1", (ingredient_name,))
+    product_info = cursor.fetchone()
+
+    if product_info:
+        # 결과에서 필요한 정보 추출
+        product_price = product_info[0]  # 가격
+        product_unit_price = product_info[1]  # 단위당 가격
+        product_url = product_info[2]  # 상품 링크 정보
+
+    return (product_price, product_unit_price, product_url)
 
 # 총 가격을 계산하는 함수.
 def get_total_price(ingredient_infos: list) -> float:
@@ -75,10 +83,25 @@ def get_youtube_info(cursor, recipe_id: int) -> tuple:
     youtube_title = ''
     channel_name = ''
     channel_img = ''
-    """
-    recipe_id에 대해서 youtube_video table에 쿼리.
-    -> channel_id를 받아서 channel 테이블에 쿼리.
-    """
+    
+    # recipe_id에 대한 youtube_video 테이블에서의 쿼리
+    cursor.execute("SELECT url, thumbnail_src, title, channel_id FROM youtube_video WHERE recipe_id = ?", (recipe_id,))
+    video_info = cursor.fetchone()
+    
+    if video_info:
+        youtube_url = video_info[0]
+        youtube_thumbnail = video_info[1]
+        youtube_title = video_info[2]
+        
+        # channel_id를 받아서 channel 테이블에서 조회
+        channel_id = video_info[3]
+        cursor.execute("SELECT name, img_src FROM channel WHERE id = ?", (channel_id,))
+        channel_info = cursor.fetchone()
+
+        if channel_info:
+            channel_name = channel_info[0]
+            channel_img = channel_info[1]
+    
     return (youtube_url, youtube_thumbnail, youtube_title, channel_name, channel_img)
 
 def lambda_handler(event, context):
@@ -129,7 +152,7 @@ def lambda_handler(event, context):
             ingredient_name = ingredient_info[0]
             ingredient_volume = ingredient_info[1]
             ingredient_unit = ingredient_info[2]
-            product_price, product_unit_price, product_url = get_product_info(cursor=cursor, ingredient_name=ingredient_name)
+            product_price, product_unit_price, product_url = get_cheapest_product_info(cursor=cursor, ingredient_name=ingredient_name)
             ingredient_infos.append([ingredient_name, product_unit_price, product_price, ingredient_volume, ingredient_unit, product_url])
         
         recipe_total_price = get_total_price(ingredient_infos=ingredient_infos) # 레시피 총 가격 계산
