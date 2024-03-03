@@ -57,7 +57,14 @@ def get_cheapest_product_info(cursor, ingredient_name: str) -> tuple:
     product_url = None
  
     # 해당 재료명에 대한 쿼리
-    cursor.execute("SELECT price, unit_price, url FROM product WHERE ingredient_name = ? ORDER BY COALESCE(unit_price, price) ASC LIMIT 1", (ingredient_name,))
+    cursor.execute(
+        """
+        SELECT price, unit_price, url 
+        FROM product WHERE ingredient_name = ? 
+        ORDER BY COALESCE(CAST(regexp_replace(split_part(unit_price, '당', 2), '[^0-9]', '') AS INTEGER), price) 
+        ASC LIMIT 1
+        """,
+        (ingredient_name,))
     product_info = cursor.fetchone()
 
     if product_info:
