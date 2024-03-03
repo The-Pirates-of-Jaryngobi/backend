@@ -1,5 +1,21 @@
 import json
+import psycopg2
 
+# PostgreSQL 연결을 위한 함수
+def connect_to_postgres():
+    # RDS 연결 정보
+    rds_host = "your-rds-endpoint.amazonaws.com"
+    username = "your-db-username"
+    password = "your-db-password"
+    db_name = "your-db-name"
+
+    try:
+        conn = psycopg2.connect(host=rds_host, user=username, password=password, dbname=db_name)
+        return conn
+    except psycopg2.Error as e:
+        print("ERROR: Could not connect to PostgreSQL instance.")
+        print(e)
+        raise
 
 # 메뉴명 전처리 함수
 def preprocess_menu_name(menu_name: str) -> str:
@@ -10,7 +26,7 @@ def preprocess_menu_name(menu_name: str) -> str:
 	return preprocessed_menu_name
 
 # "menu" 테이블에서 메뉴 이름의 id를 반환하는 함수.
-def get_menu_id(menu_name: str) -> int:
+def get_menu_id(cursor, menu_name: str) -> int:
 	menu_id = None
 	"""
 	메뉴 이름에 대한 쿼리 코드 작성.
@@ -18,7 +34,7 @@ def get_menu_id(menu_name: str) -> int:
 	return menu_id # 만약 메뉴 이름이 없다면 None으로 반환할 예정.
 
 # "recipe" 테이블에서 해당 메뉴 아이디를 갖는 레시피 리스트를 반환하는 함수.
-def get_recipe_id_list(menu_id: int) -> list:
+def get_recipe_id_list(cursor, menu_id: int) -> list:
 	recipe_id_list = []
 	"""
 	메뉴 id에 대한 쿼리 코드 작성.
@@ -26,7 +42,7 @@ def get_recipe_id_list(menu_id: int) -> list:
 	return recipe_id_list # 만약 레시피 목록이 없다면 빈 리스트 반환할 예정.
 
 # "ingredient" 테이블에서 해당 레시피 아이디를 갖는 재료 정보를 반환하는 함수.
-def get_ingredient_info_list(recipe_id: int) -> list:
+def get_ingredient_info_list(cursor, recipe_id: int) -> list:
 	ingredient_info_list = []
 	"""
 	재료 정보 쿼리 코드 작성.
@@ -35,7 +51,7 @@ def get_ingredient_info_list(recipe_id: int) -> list:
 	return ingredient_info_list
 
 # "product" 테이블에서 해당 재료명에 대해서 정보를 반환하는 함수.
-def get_product_info(ingredient_name: str) -> tuple:
+def get_product_info(cursor, ingredient_name: str) -> tuple:
 	product_price = None
 	product_unit_price = None
 	product_url = None
@@ -53,7 +69,7 @@ def calculate_total_price(ingredient_info_list: list, product_info_list: list) -
 	return total_price
 
 # "youtube_video" 테이블에서 해당 레시피 아이디에 대해서 정보를 반환하는 함수.
-def get_youtube_info(recipe_id: int) -> tuple:
+def get_youtube_info(cursor, recipe_id: int) -> tuple:
     youtube_url = ''
     youtube_thumbnail = ''
     youtube_title = ''
@@ -73,20 +89,23 @@ def lambda_handler(event, context):
             'body': json.dumps({'error': 'Method not allowed'})
         }
     
-    # body에서 'menu_name' 값을 추출
+    conn = connect_to_postgres()
+    cursor = conn.cursor()
+    
+    # event로부터 메뉴명 추출
     body = json.loads(event['body'])
     menu_name = body.get('menu_name')
 		
 	# 메뉴명 전처리 및 검색
     menu_name = preprocess_menu_name(menu_name)
-    menu_id = get_menu_id(menu_name)
+    menu_id = get_menu_id(cursor=cursor, menu_name=menu_name)
     if menu_id is None:
         return {
             'statusCode': 404,
             'body': json.dumps('메뉴명이 존재하지 않습니다.')
         }
 		
-    recipe_id_list = get_recipe_id_list(menu_id) # 레시피 목록 검색
+    recipe_id_list = get_recipe_id_list(cursor=cursor, menu_id=menu_id) # 레시피 목록 검색
     if len(recipe_id_list) == 0:
         return {
             'statusCode': 404,
@@ -102,7 +121,7 @@ def lambda_handler(event, context):
     # 각 레시피에 대한 가격 정보 조회
     for recipe_id in recipe_id_list:
         recipe_infos['recipe_id_list'].append(recipe_id)
-        ingredient_info_list = get_ingredient_info_list(recipe_id)
+        ingredient_info_list = get_ingredient_info_list(cursor=cursor, recipe_id=recipe_id)
         recipe_infos['ingredient_info_list'].append(ingredient_info_list)
         # 각 재료에 대한 정보 조회
         for ingredient_info in ingredient_info_list:
