@@ -32,7 +32,9 @@ def get_menu_id(cursor, menu_name: str) -> int:
 
     # 메뉴 이름에 대한 쿼리 코드 작성
     sql_query = """
-        SELECT id FROM menu WHERE name = %s
+        SELECT id
+        FROM menu
+        WHERE name = %s
     """
 
     cursor.execute(sql_query, (menu_name,))
@@ -52,7 +54,9 @@ def get_recipe_id_list(cursor, menu_id: str) -> list:
     메뉴 id에 대한 쿼리 코드 작성
     """
     sql_query = """
-        SELECT id FROM recipe WHERE menu_id = %s
+        SELECT id
+        FROM recipe
+        WHERE menu_id = %s
     """
     cursor.execute(sql_query, (menu_id,))
     recipe_ids = cursor.fetchall()
@@ -73,17 +77,15 @@ def get_ingredient_info_list(cursor, recipe_id: str) -> list:
     예상 결과 : [[ingredient_name1, ingredient_volume1, ingredient_unit1], ...]
     """
     sql_query = """
-        SELECT i.name, ri.volume, ri.unit
-        FROM recipe_ingredients ri
-        JOIN ingredients i
-        ON ri.ingredient_id = i.id
-        WHERE ri.recipe_id = %s
+        SELECT name, volume, unit
+        FROM ingredient
+        WHERE recipe_id = %s
     """
     cursor.execute(sql_query, (recipe_id,))
-    results = cursor.fetchall()
+    ingredient_infos = cursor.fetchall()
 
-    for result in results:
-        ingredient_info_list.append(list(result))
+    for ingredient in ingredient_infos:
+        ingredient_info_list.append(list(ingredient))
 
     return ingredient_info_list
 
