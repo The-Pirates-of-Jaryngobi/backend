@@ -55,7 +55,7 @@ def get_cheapest_product_info(cursor, ingredient_name: str) -> tuple:
     product_price = None
     product_unit_price = None
     product_url = None
- 
+
     # 해당 재료명에 대한 쿼리. unit_price()가 가장 싼 것 위주로 검색. 만약 없다면 그냥 price를 기준으로.
     cursor.execute("SELECT price, unit_price, url FROM product WHERE ingredient_name = ? ORDER BY COALESCE(unit_price, price) ASC LIMIT 1", (ingredient_name,))
     product_info = cursor.fetchone()
