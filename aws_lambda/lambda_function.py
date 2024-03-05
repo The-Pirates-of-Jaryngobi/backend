@@ -17,38 +17,76 @@ def connect_to_postgres():
         print(e)
         raise
 
-# 메뉴명 전처리 함수
+# 웹에서 검색한 메뉴명 전처리 함수
+# ex) "소 불고기" => "소불고기"
 def preprocess_menu_name(menu_name: str) -> str:
-	preprocessed_menu_name = ''
-	# 메뉴명 전처리 코드 작성.
-	# ex) "소 불고기" => "소불고기"
-		
-	return preprocessed_menu_name
+    # preprocessed_menu_name = ''
+    pre_menu_name = menu_name.replace(" ", "")
 
-# "menu" 테이블에서 메뉴 이름의 id를 반환하는 함수.
+    return pre_menu_name
+
+
+# "menu" 테이블에서 메뉴의 이름의 id를 반환하는 함수
 def get_menu_id(cursor, menu_name: str) -> int:
-	menu_id = None
-	"""
-	메뉴 이름에 대한 쿼리 코드 작성.
-	"""
-	return menu_id # 만약 메뉴 이름이 없다면 None으로 반환할 예정.
+    menu_id = None
 
-# "recipe" 테이블에서 해당 메뉴 아이디를 갖는 레시피 리스트를 반환하는 함수.
+    # 메뉴 이름에 대한 쿼리 코드 작성
+    sql_query = """
+        SELECT id FROM menu WHERE name = %s
+    """
+
+    cursor.execute(sql_query, (menu_name,))
+    result = cursor.fetchone()
+
+    if result:
+        menu_id = result[0]
+
+    return menu_id
+
+
+# "recipe" 테이블에서 해당 메뉴 아이디를 갖는 레시피 리스트를 반환하는 함수
 def get_recipe_id_list(cursor, menu_id: str) -> list:
-	recipe_id_list = []
-	"""
-	메뉴 id에 대한 쿼리 코드 작성.
-	"""
-	return recipe_id_list # 만약 레시피 목록이 없다면 빈 리스트 반환할 예정.
+    recipe_id_list = []
 
-# "ingredient" 테이블에서 해당 레시피 아이디를 갖는 재료 정보를 반환하는 함수.
+    """
+    메뉴 id에 대한 쿼리 코드 작성
+    """
+    sql_query = """
+        SELECT id FROM recipe WHERE menu_id = %s
+    """
+    cursor.execute(sql_query, (menu_id,))
+    recipe_ids = cursor.fetchall()
+
+    for recipe_id in recipe_ids:
+        recipe_id_list.append(recipe_id[0])
+
+    # 만약 레시피 목록이 없다면 빈 리스트 반환할 예정
+    return recipe_id_list
+
+
+# "ingredient" 테이블에서 해당 레시피 아이디를 갖는 재료 정보를 반환하는 함수
 def get_ingredient_info_list(cursor, recipe_id: str) -> list:
-	ingredient_info_list = []
-	"""
-	재료 정보 쿼리 코드 작성.
-	예상 결과 : [[ingredient_name1, ingredient_volume1, ingredient_unit1], ...]
-	"""
-	return ingredient_info_list
+    ingredient_info_list = []
+
+    """
+    재료 정보 쿼리 코드 작성
+    예상 결과 : [[ingredient_name1, ingredient_volume1, ingredient_unit1], ...]
+    """
+    sql_query = """
+        SELECT i.name, ri.volume, ri.unit
+        FROM recipe_ingredients ri
+        JOIN ingredients i
+        ON ri.ingredient_id = i.id
+        WHERE ri.recipe_id = %s
+    """
+    cursor.execute(sql_query, (recipe_id,))
+    results = cursor.fetchall()
+
+    for result in results:
+        ingredient_info_list.append(list(result))
+
+    return ingredient_info_list
+
 
 # "product" 테이블에서 해당 재료명에 대해서 최저가 상품 정보를 반환하는 함수.
 def get_cheapest_product_info(cursor, ingredient_name: str) -> tuple:
