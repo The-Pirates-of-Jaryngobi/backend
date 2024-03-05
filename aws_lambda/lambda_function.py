@@ -56,8 +56,45 @@ def get_cheapest_product_info(cursor, ingredient_name: str) -> tuple:
     product_unit_price = None
     product_url = None
 
-    # 해당 재료명에 대한 쿼리. unit_price()가 가장 싼 것 위주로 검색. 만약 없다면 그냥 price를 기준으로.
-    cursor.execute("SELECT price, unit_price, url FROM product WHERE ingredient_name = ? ORDER BY COALESCE(unit_price, price) ASC LIMIT 1", (ingredient_name,))
+    # 해당 재료명에 대한 쿼리. unit_price가 가장 싼 것 위주로 검색. 만약 없다면 그냥 price를 기준으로.
+    sql_query = """
+    SELECT price, unit_price, url 
+    FROM (
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_1
+        UNION ALL
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_2
+        UNION ALL
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_3
+        UNION ALL
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_4
+        UNION ALL
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_5
+        UNION ALL
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_6
+        UNION ALL
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_7
+        UNION ALL
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_8
+        UNION ALL
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_9
+        UNION ALL
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_10
+    ) AS combined_products
+    WHERE ingredient_name = %s
+    ORDER BY COALESCE(unit_price, price) ASC 
+    LIMIT 1
+    """
+    cursor.execute(sql_query, (ingredient_name,))
     product_info = cursor.fetchone()
 
     if product_info:
