@@ -34,7 +34,7 @@ def get_menu_id(cursor, menu_name: str) -> int:
 	return menu_id # 만약 메뉴 이름이 없다면 None으로 반환할 예정.
 
 # "recipe" 테이블에서 해당 메뉴 아이디를 갖는 레시피 리스트를 반환하는 함수.
-def get_recipe_id_list(cursor, menu_id: int) -> list:
+def get_recipe_id_list(cursor, menu_id: str) -> list:
 	recipe_id_list = []
 	"""
 	메뉴 id에 대한 쿼리 코드 작성.
@@ -42,7 +42,7 @@ def get_recipe_id_list(cursor, menu_id: int) -> list:
 	return recipe_id_list # 만약 레시피 목록이 없다면 빈 리스트 반환할 예정.
 
 # "ingredient" 테이블에서 해당 레시피 아이디를 갖는 재료 정보를 반환하는 함수.
-def get_ingredient_info_list(cursor, recipe_id: int) -> list:
+def get_ingredient_info_list(cursor, recipe_id: str) -> list:
 	ingredient_info_list = []
 	"""
 	재료 정보 쿼리 코드 작성.
@@ -126,7 +126,7 @@ def get_total_price(ingredient_infos: list) -> float:
     return total_price
 
 # "youtube_video" 테이블에서 해당 레시피 아이디에 대해서 정보를 반환하는 함수.
-def get_youtube_info(cursor, recipe_id: int) -> tuple:
+def get_youtube_info(cursor, recipe_id: str) -> tuple:
     youtube_url = ''
     youtube_thumbnail = ''
     youtube_title = ''
