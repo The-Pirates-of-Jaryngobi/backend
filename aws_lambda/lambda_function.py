@@ -55,16 +55,46 @@ def get_cheapest_product_info(cursor, ingredient_name: str) -> tuple:
     product_price = None
     product_unit_price = None
     product_url = None
- 
-    # 해당 재료명에 대한 쿼리
-    cursor.execute(
-        """
-        SELECT price, unit_price, url 
-        FROM product WHERE ingredient_name = ? 
-        ORDER BY COALESCE(CAST(regexp_replace(split_part(unit_price, '당', 2), '[^0-9]', '') AS INTEGER), price) 
-        ASC LIMIT 1
-        """,
-        (ingredient_name,))
+
+    # 해당 재료명에 대한 쿼리. unit_price가 가장 싼 것 위주로 검색. 만약 없다면 그냥 price를 기준으로.
+    sql_query = """
+    SELECT price, unit_price, url 
+    FROM (
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_1
+        UNION ALL
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_2
+        UNION ALL
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_3
+        UNION ALL
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_4
+        UNION ALL
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_5
+        UNION ALL
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_6
+        UNION ALL
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_7
+        UNION ALL
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_8
+        UNION ALL
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_9
+        UNION ALL
+        SELECT price, unit_price, url, ingredient_name
+        FROM product_10
+    ) AS combined_products
+    WHERE ingredient_name = %s
+    ORDER BY COALESCE(unit_price, price) ASC 
+    LIMIT 1
+    """
+    cursor.execute(sql_query, (ingredient_name,))
     product_info = cursor.fetchone()
 
     if product_info:
@@ -77,11 +107,23 @@ def get_cheapest_product_info(cursor, ingredient_name: str) -> tuple:
 
 # 총 가격을 계산하는 함수.
 def get_total_price(ingredient_infos: list) -> float:
-	total_price = 0.0
-	"""
-	로직 작성.
-	"""
-	return total_price
+    total_price = 0.0
+    for i in range(len(ingredient_infos)):
+        # ingredient_name = ingredient_infos[i][0] # 재료명
+        product_unit_price = ingredient_infos[i][1] # 단위당 가격
+        product_price = ingredient_infos[i][2] # 가격
+        ingredient_volume = ingredient_infos[i][3] # 첨가량
+        # ingredient_unit = ingredient_infos[i][4] # 첨가 단위
+        # product_url = ingredient_infos[i][5] # 상품 링크
+        
+        if product_unit_price: # 만약 단위당 가격이 존재한다면
+            total_price += ingredient_volume * product_unit_price # ex) 10(g) * 1g당355원 -> 3550
+        elif product_price: # 가격만 존재한다면
+            total_price += product_price
+        else: # 단위당 가격, 가격 둘 다 존재하지 않는 경우. (예외 상황)
+            continue
+    
+    return total_price
 
 # "youtube_video" 테이블에서 해당 레시피 아이디에 대해서 정보를 반환하는 함수.
 def get_youtube_info(cursor, recipe_id: int) -> tuple:
