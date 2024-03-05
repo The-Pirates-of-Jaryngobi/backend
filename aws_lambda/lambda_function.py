@@ -125,16 +125,19 @@ def get_total_price(ingredient_infos: list) -> float:
     
     return total_price
 
-# "youtube_video" 테이블에서 해당 레시피 아이디에 대해서 정보를 반환하는 함수.
-def get_youtube_info(cursor, recipe_id: int) -> tuple:
+# "youtube_video", "channel" 테이블에서 해당 레시피 아이디에 대해서 정보를 반환하는 함수.
+def get_youtube_info(cursor, recipe_id: str) -> tuple:
     youtube_url = ''
     youtube_thumbnail = ''
     youtube_title = ''
     channel_name = ''
     channel_img = ''
     
-    # recipe_id에 대한 youtube_video 테이블에서의 쿼리
-    cursor.execute("SELECT url, thumbnail_src, title, channel_id FROM youtube_video WHERE recipe_id = ?", (recipe_id,))
+    # recipe_id에 대해서 recipe 테이블에서 쿼리하여 youtube_video_id를 찾기.
+    cursor.execute("SELECT youtube_video_id FROM recipe WHERE id = %s", (recipe_id,))
+    youtube_video_id = cursor.fetchone()[0]
+    # youtube_video_id에 대해서 youtube_video 테이블에 쿼리.
+    cursor.execute("SELECT url, thumbnail_src, title, channel_id FROM youtube_video WHERE id = %s", (youtube_video_id,))
     video_info = cursor.fetchone()
     
     if video_info:
@@ -144,7 +147,7 @@ def get_youtube_info(cursor, recipe_id: int) -> tuple:
         
         # channel_id를 받아서 channel 테이블에서 조회
         channel_id = video_info[3]
-        cursor.execute("SELECT name, img_src FROM channel WHERE id = ?", (channel_id,))
+        cursor.execute("SELECT name, img_src FROM channel WHERE id = %s", (channel_id,))
         channel_info = cursor.fetchone()
 
         if channel_info:
