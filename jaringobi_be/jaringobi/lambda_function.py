@@ -196,6 +196,7 @@ def get_youtube_info(cursor, recipe_id: str) -> tuple:
     
     return (youtube_url, youtube_thumbnail, youtube_title, channel_name, channel_img)
 
+
 def lambda_handler(event, context):
     # HTTP GET 요청인지 확인
     if event['httpMethod'] != 'GET':
@@ -234,6 +235,7 @@ def lambda_handler(event, context):
 			'ingredient_info_list' : [],
 			'recipe_total_price_list' : []
 	}
+
     # 각 레시피에 대한 가격 정보 조회
     for recipe_id in recipe_id_list:
         recipe_infos['recipe_id_list'].append(recipe_id)
