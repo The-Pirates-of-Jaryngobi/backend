@@ -22,5 +22,6 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     # path('', views.home),
-    path('', include('jaringobi.urls')),  # https://wikidocs.net/70649
+    path('api/', include('rest_framework.urls')),  #   # https://wikidocs.net/197561
+    path('app/', include('jaringobi.urls')),  # https://wikidocs.net/70649
 ]

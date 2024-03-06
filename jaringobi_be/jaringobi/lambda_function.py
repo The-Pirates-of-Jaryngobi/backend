@@ -1,13 +1,18 @@
-import json
-import psycopg2
+import json, psycopg2
+from .logger import *
+set_file_logger()
 
-# PostgreSQL 연결을 위한 함수
+
 def connect_to_postgres():
-    # RDS 연결 정보
-    rds_host = "your-rds-endpoint.amazonaws.com"
-    username = "your-db-username"
-    password = "your-db-password"
-    db_name = "your-db-name"
+    # rds_host = "your-rds-endpoint.amazonaws.com"
+    # username = "your-db-username"
+    # password = "your-db-password"
+    # db_name = "your-db-name"
+
+    rds_host = "de-6-1-test.ch4xfyi6stod.ap-northeast-2.rds.amazonaws.com"
+    username = "jaryngobi"
+    password = "pirates-recipe"
+    db_name = "service"
 
     try:
         conn = psycopg2.connect(host=rds_host, user=username, password=password, dbname=db_name)
@@ -20,10 +25,9 @@ def connect_to_postgres():
 # 웹에서 검색한 메뉴명 전처리 함수
 # ex) "소 불고기" => "소불고기"
 def preprocess_menu_name(menu_name: str) -> str:
-    # preprocessed_menu_name = ''
-    pre_menu_name = menu_name.replace(" ", "")
+    logging.info("menu name: {}".format(menu_name))
+    return menu_name.replace(" ", "")
 
-    return pre_menu_name
 
 
 # "menu" 테이블에서 메뉴의 이름의 id를 반환하는 함수
@@ -155,14 +159,14 @@ def get_total_price(ingredient_infos: list) -> float:
         ingredient_volume = ingredient_infos[i][3] # 첨가량
         # ingredient_unit = ingredient_infos[i][4] # 첨가 단위
         # product_url = ingredient_infos[i][5] # 상품 링크
-        
-        if product_unit_price: # 만약 단위당 가격이 존재한다면
+
+        if product_unit_price and ingredient_volume: # 만약 단위당 가격이 존재한다면
             total_price += ingredient_volume * product_unit_price # ex) 10(g) * 1g당355원 -> 3550
         elif product_price: # 가격만 존재한다면
             total_price += product_price
         else: # 단위당 가격, 가격 둘 다 존재하지 않는 경우. (예외 상황)
             continue
-    
+
     return total_price
 
 # "youtube_video", "channel" 테이블에서 해당 레시피 아이디에 대해서 정보를 반환하는 함수.
@@ -172,19 +176,19 @@ def get_youtube_info(cursor, recipe_id: str) -> tuple:
     youtube_title = ''
     channel_name = ''
     channel_img = ''
-    
+
     # recipe_id에 대해서 recipe 테이블에서 쿼리하여 youtube_video_id를 찾기.
     cursor.execute("SELECT youtube_video_id FROM recipe WHERE id = %s", (recipe_id,))
     youtube_video_id = cursor.fetchone()[0]
     # youtube_video_id에 대해서 youtube_video 테이블에 쿼리.
     cursor.execute("SELECT url, thumbnail_src, title, channel_id FROM youtube_video WHERE id = %s", (youtube_video_id,))
     video_info = cursor.fetchone()
-    
+
     if video_info:
         youtube_url = video_info[0]
         youtube_thumbnail = video_info[1]
         youtube_title = video_info[2]
-        
+
         # channel_id를 받아서 channel 테이블에서 조회
         channel_id = video_info[3]
         cursor.execute("SELECT name, img_src FROM channel WHERE id = %s", (channel_id,))
@@ -193,25 +197,17 @@ def get_youtube_info(cursor, recipe_id: str) -> tuple:
         if channel_info:
             channel_name = channel_info[0]
             channel_img = channel_info[1]
-    
+
     return (youtube_url, youtube_thumbnail, youtube_title, channel_name, channel_img)
 
-def lambda_handler(event, context):
-    # HTTP GET 요청인지 확인
-    if event['httpMethod'] != 'GET':
-        return {
-            'statusCode': 405,
-            'body': json.dumps({'error': 'Method not allowed'})
-        }
-    
+
+def lambda_handler(menu_name):
     conn = connect_to_postgres()
     cursor = conn.cursor()
-    
-    # event로부터 메뉴명 추출
-    body = json.loads(event['body'])
-    menu_name = body.get('menu_name')
-		
-	# 메뉴명 전처리 및 검색
+
+    # body = json.loads(event['body'])
+    # menu_name = body.get('menu_name')
+
     menu_name = preprocess_menu_name(menu_name)
     menu_id = get_menu_id(cursor=cursor, menu_name=menu_name)
     if menu_id is None:
@@ -220,7 +216,7 @@ def lambda_handler(event, context):
             'statusCode': 404,
             'body': json.dumps('메뉴명이 존재하지 않습니다.')
         }
-		
+
     recipe_id_list = get_recipe_id_list(cursor=cursor, menu_id=menu_id) # 레시피 목록 검색
     if len(recipe_id_list) == 0:
         conn.close()
@@ -228,12 +224,13 @@ def lambda_handler(event, context):
             'statusCode': 404,
             'body': json.dumps('메뉴명에 대한 레시피가 존재하지 않습니다.')
         }
-    
+
     recipe_infos = {
-			'recipe_id_list' : [],
-			'ingredient_info_list' : [],
-			'recipe_total_price_list' : []
-	}
+        'recipe_id_list' : [],
+        'ingredient_info_list' : [],
+        'recipe_total_price_list' : []
+    }
+
     # 각 레시피에 대한 가격 정보 조회
     for recipe_id in recipe_id_list:
         recipe_infos['recipe_id_list'].append(recipe_id)
@@ -246,16 +243,16 @@ def lambda_handler(event, context):
             ingredient_unit = ingredient_info[2]
             product_price, product_unit_price, product_url = get_cheapest_product_info(cursor=cursor, ingredient_name=ingredient_name)
             ingredient_infos.append([ingredient_name, product_unit_price, product_price, ingredient_volume, ingredient_unit, product_url])
-        
+
         recipe_total_price = get_total_price(ingredient_infos=ingredient_infos) # 레시피 총 가격 계산
         recipe_infos['ingredient_info_list'].append(ingredient_infos)
         recipe_infos['recipe_total_price_list'].append(recipe_total_price)
-    
+
     # recipe_total_price_list에서 최저값의 인덱스를 찾은 후 해당 레시피 아이디로 유튜브 데이터 조회.
     min_price_index = recipe_infos['recipe_total_price_list'].index(min(recipe_infos['recipe_total_price_list']))
     min_recipe_id = recipe_infos['recipe_id_list'][min_price_index]
     youtube_url, youtube_thumbnail, youtube_title, channel_name, channel_img = get_youtube_info(cursor=cursor, recipe_id=min_recipe_id)
-    
+
     # 최저가 레시피의 데이터 추출.
     total_price = recipe_infos['recipe_total_price_list'][min_price_index]
     ingredient_list = []
@@ -267,7 +264,7 @@ def lambda_handler(event, context):
         ingredient_volume = ingredient_info_list[i][3]
         ingredient_unit = ingredient_info_list[i][4]
         ingredient_url = ingredient_info_list[i][5]
-        
+
         ingredient = {
             "ingredient_name": ingredient_name,
             "ingredient_unit_price": ingredient_unit_price,
@@ -277,7 +274,7 @@ def lambda_handler(event, context):
             "ingredient_url" : ingredient_url
         }
         ingredient_list.append(ingredient)
-    
+
     result = {
         "youtube_url": youtube_url,
         "youtube_thumbnail": youtube_thumbnail,
@@ -287,9 +284,9 @@ def lambda_handler(event, context):
         "total_price": total_price,
         "ingredient_list": ingredient_list
     }
-    
+
     conn.close()
-    
+
     return {
         'statusCode': 200,
         'body': json.dumps(result)
