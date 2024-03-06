@@ -6,6 +6,7 @@ from rest_framework.response import Response
 
 from .lambda_function import lambda_handler
 
+import json
 from .logger import *
 set_file_logger()
 
@@ -14,7 +15,7 @@ def home(request):
     return HttpResponse("최저가 유튜버 레시피는?")
 
 
-@api_view(['GET'])
+@api_view(['POST'])
 def search(request):
-    menu_name = request.GET.get('menu_name','더덕구이')
+    menu_name = json.loads(request.body)['menu_name']
     return Response(lambda_handler(menu_name))
