@@ -1,7 +1,9 @@
-from django.urls import path
+from django.urls import path, include
 
-from . import views
+from .views import *
 
 urlpatterns = [
-    path('', views.home),  # https://wikidocs.net/70649
+    path('', home),  # https://wikidocs.net/70649
+    path('search/', search),
+    # path('api/', include('rest_framework.urls')),
 ]
