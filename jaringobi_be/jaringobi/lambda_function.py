@@ -248,11 +248,13 @@ def lambda_handler(menu_name):
         recipe_infos['ingredient_info_list'].append(ingredient_infos)
         recipe_infos['recipe_total_price_list'].append(recipe_total_price)
 
-    # recipe_total_price_list에서 최저값의 인덱스를 찾은 후 해당 레시피 아이디로 유튜브 데이터 조회.
-    min_price_index = recipe_infos['recipe_total_price_list'].index(min(recipe_infos['recipe_total_price_list']))
+    # recipe_total_price_list에서 최저가의 인덱스를 찾은 후 해당 레시피 아이디로 유튜브 데이터 조회.
+    valid_indices = [i for i, price in enumerate(recipe_infos['recipe_total_price_list']) if price != 0]
+    min_price_index = min(valid_indices, key=lambda x: recipe_infos['recipe_total_price_list'][x])
     min_recipe_id = recipe_infos['recipe_id_list'][min_price_index]
+    
     youtube_url, youtube_thumbnail, youtube_title, channel_name, channel_img = get_youtube_info(cursor=cursor, recipe_id=min_recipe_id)
-
+    
     # 최저가 레시피의 데이터 추출.
     total_price = recipe_infos['recipe_total_price_list'][min_price_index]
     ingredient_list = []
