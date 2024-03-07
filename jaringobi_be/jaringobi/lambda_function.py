@@ -267,7 +267,7 @@ def lambda_handler(menu_name):
         ingredient = {
             "ingredient_name": ingredient_name,
             "ingredient_unit_price": ingredient_unit_price,
-            "ingredeint_price": ingredient_price,
+            "ingredient_price": ingredient_price,
             "ingredient_volume": ingredient_volume,
             "ingredient_unit": ingredient_unit,
             "ingredient_url": ingredient_url,
