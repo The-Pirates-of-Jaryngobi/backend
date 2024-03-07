@@ -94,39 +94,40 @@ def get_cheapest_product_info(cursor, ingredient_name: str) -> tuple:
     product_price = None
     product_gram_price = None
     product_url = None
+    product_img = None
 
     # 해당 재료명에 대한 쿼리. gram_price가 가장 싼 것 위주로 검색. 만약 없다면 그냥 price를 기준으로.
     sql_query = """
-    SELECT price, gram_price, url 
+    SELECT price, gram_price, url, image
     FROM (
-        SELECT price, gram_price, url, ingredient_name
+        SELECT price, gram_price, url, ingredient_name, image
         FROM product_1
         UNION ALL
-        SELECT price, gram_price, url, ingredient_name
+        SELECT price, gram_price, url, ingredient_name, image
         FROM product_2
         UNION ALL
-        SELECT price, gram_price, url, ingredient_name
+        SELECT price, gram_price, url, ingredient_name, image
         FROM product_3
         UNION ALL
-        SELECT price, gram_price, url, ingredient_name
+        SELECT price, gram_price, url, ingredient_name, image
         FROM product_4
         UNION ALL
-        SELECT price, gram_price, url, ingredient_name
+        SELECT price, gram_price, url, ingredient_name, image
         FROM product_5
         UNION ALL
-        SELECT price, gram_price, url, ingredient_name
+        SELECT price, gram_price, url, ingredient_name, image
         FROM product_6
         UNION ALL
-        SELECT price, gram_price, url, ingredient_name
+        SELECT price, gram_price, url, ingredient_name, image
         FROM product_7
         UNION ALL
-        SELECT price, gram_price, url, ingredient_name
+        SELECT price, gram_price, url, ingredient_name, image
         FROM product_8
         UNION ALL
-        SELECT price, gram_price, url, ingredient_name
+        SELECT price, gram_price, url, ingredient_name, image
         FROM product_9
         UNION ALL
-        SELECT price, gram_price, url, ingredient_name
+        SELECT price, gram_price, url, ingredient_name, image
         FROM product_10
     ) AS combined_products
     WHERE ingredient_name = %s
@@ -140,9 +141,10 @@ def get_cheapest_product_info(cursor, ingredient_name: str) -> tuple:
         # 결과에서 필요한 정보 추출
         product_price = product_info[0]  # 가격
         product_gram_price = product_info[1]  # 단위당 가격
-        product_url = product_info[2]  # 상품 링크 정보
+        product_url = product_info[2] # 상품 링크 정보
+        product_img = product_info[3] # 상품 이미지
 
-    return (product_price, product_gram_price, product_url)
+    return (product_price, product_gram_price, product_url, product_img)
 
 # 총 가격을 계산하는 함수.
 def get_total_price(ingredient_infos: list) -> float:
@@ -155,6 +157,7 @@ def get_total_price(ingredient_infos: list) -> float:
         ingredient_volume = ingredient_infos[i][3] # 첨가량
         # ingredient_unit = ingredient_infos[i][4] # 첨가 단위
         # product_url = ingredient_infos[i][5] # 상품 링크
+        # product_img = ingredient_infos[i][6] # 상품 이미지
 
         if product_unit_price and ingredient_volume: # 만약 단위당 가격이 존재한다면
             total_price += ingredient_volume * product_unit_price # ex) 10(g) * 1g당355원 -> 3550
@@ -232,8 +235,8 @@ def lambda_handler(menu_name):
             ingredient_name = ingredient_info[0]
             ingredient_volume = ingredient_info[1]
             ingredient_unit = ingredient_info[2]
-            product_price, product_unit_price, product_url = get_cheapest_product_info(cursor=cursor, ingredient_name=ingredient_name)
-            ingredient_infos.append([ingredient_name, product_unit_price, product_price, ingredient_volume, ingredient_unit, product_url])
+            product_price, product_unit_price, product_url, product_img = get_cheapest_product_info(cursor=cursor, ingredient_name=ingredient_name)
+            ingredient_infos.append([ingredient_name, product_unit_price, product_price, ingredient_volume, ingredient_unit, product_url, product_img])
 
         recipe_total_price, ingredients_without_unit = get_total_price(ingredient_infos=ingredient_infos) # 레시피 총 가격 계산
         recipe_infos['ingredient_info_list'].append(ingredient_infos)
@@ -259,14 +262,16 @@ def lambda_handler(menu_name):
         ingredient_volume = ingredient_info_list[i][3]
         ingredient_unit = ingredient_info_list[i][4]
         ingredient_url = ingredient_info_list[i][5]
+        ingredient_img = ingredient_info_list[i][6]
 
         ingredient = {
             "ingredient_name": ingredient_name,
             "ingredient_unit_price": ingredient_unit_price,
             "ingredeint_price": ingredient_price,
-            "ingredient_volume" : ingredient_volume,
-            "ingredient_unit" : ingredient_unit,
-            "ingredient_url" : ingredient_url
+            "ingredient_volume": ingredient_volume,
+            "ingredient_unit": ingredient_unit,
+            "ingredient_url": ingredient_url,
+            "ingredient_img": ingredient_img
         }
         ingredient_list.append(ingredient)
 
