@@ -25,7 +25,7 @@ def connect_to_postgres():
 # 웹에서 검색한 메뉴명 전처리 함수
 # ex) "소 불고기" => "소불고기"
 def preprocess_menu_name(menu_name: str) -> str:
-    print("menu name: {}".format(menu_name))
+    logging.info("menu name: {}".format(menu_name))
     return menu_name.replace(" ", "")
 
 # "menu" 테이블에서 메뉴의 이름의 id를 반환하는 함수
