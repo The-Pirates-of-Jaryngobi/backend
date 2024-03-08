@@ -1,0 +1,13 @@
+annotated-types==0.6.0
+asgiref==3.7.2
+Django==5.0.3
+djangorestframework==3.14.0
+greenlet==3.0.3
+inflect==7.0.0
+psycopg2-binary==2.9.9
+pydantic==2.6.3
+pydantic_core==2.16.3
+pytz==2024.1
+SQLAlchemy==1.4.52
+sqlparse==0.4.4
+typing_extensions==4.10.0
