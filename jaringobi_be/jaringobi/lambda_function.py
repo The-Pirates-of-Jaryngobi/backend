@@ -12,7 +12,7 @@ def connect_to_postgres():
     rds_host = "de-6-1-test.ch4xfyi6stod.ap-northeast-2.rds.amazonaws.com"
     username = "jaryngobi"
     password = "pirates-recipe"
-    db_name = "test"
+    db_name = "service"
 
     try:
         conn = psycopg2.connect(host=rds_host, user=username, password=password, dbname=db_name)
@@ -171,6 +171,7 @@ def get_youtube_info(cursor, recipe_id: str) -> tuple:
     youtube_url = ''
     youtube_thumbnail = ''
     youtube_title = ''
+    youtube_uploaded_date = ''
     channel_name = ''
     channel_img = ''
 
@@ -178,16 +179,17 @@ def get_youtube_info(cursor, recipe_id: str) -> tuple:
     cursor.execute("SELECT youtube_video_id FROM recipe WHERE id = %s", (recipe_id,))
     youtube_video_id = cursor.fetchone()[0]
     # youtube_video_id에 대해서 youtube_video 테이블에 쿼리.
-    cursor.execute("SELECT url, thumbnail_src, title, channel_id FROM youtube_video WHERE id = %s", (youtube_video_id,))
+    cursor.execute("SELECT url, thumbnail_src, title, uploaded_date, channel_id FROM youtube_video WHERE id = %s", (youtube_video_id,))
     video_info = cursor.fetchone()
 
     if video_info:
         youtube_url = video_info[0]
         youtube_thumbnail = video_info[1]
         youtube_title = video_info[2]
+        youtube_uploaded_date = video_info[3]
 
         # channel_id를 받아서 channel 테이블에서 조회
-        channel_id = video_info[3]
+        channel_id = video_info[4]
         cursor.execute("SELECT name, img_src FROM channel WHERE id = %s", (channel_id,))
         channel_info = cursor.fetchone()
 
@@ -195,7 +197,7 @@ def get_youtube_info(cursor, recipe_id: str) -> tuple:
             channel_name = channel_info[0]
             channel_img = channel_info[1]
 
-    return (youtube_url, youtube_thumbnail, youtube_title, channel_name, channel_img)
+    return (youtube_url, youtube_thumbnail, youtube_title, youtube_uploaded_date, channel_name, channel_img)
 
 def lambda_handler(menu_name):
     conn = connect_to_postgres()
@@ -248,7 +250,7 @@ def lambda_handler(menu_name):
     min_price_index = min(valid_indices, key=lambda x: recipe_infos['recipe_total_price_list'][x])
     min_recipe_id = recipe_infos['recipe_id_list'][min_price_index]
     
-    youtube_url, youtube_thumbnail, youtube_title, channel_name, channel_img = get_youtube_info(cursor=cursor, recipe_id=min_recipe_id)
+    youtube_url, youtube_thumbnail, youtube_title, youtube_uploaded_date, channel_name, channel_img = get_youtube_info(cursor=cursor, recipe_id=min_recipe_id)
     
     # 최저가 레시피의 데이터 추출.
     total_price = recipe_infos['recipe_total_price_list'][min_price_index]
@@ -279,6 +281,7 @@ def lambda_handler(menu_name):
         "youtube_url": youtube_url,
         "youtube_thumbnail": youtube_thumbnail,
         "youtube_title": youtube_title,
+        "youtube_uploaded_date": youtube_uploaded_date,
         "channel_name": channel_name,
         "channel_img": channel_img,
         "total_price": total_price,
